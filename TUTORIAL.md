@@ -1,6 +1,6 @@
-# Building a Static Blog with Astro, Inbind CMS, and Claude Code
+# Building a Static Blog with Astro and Inbind CMS
 
-A complete guide to creating a blazing-fast static blog using Astro for the frontend, Inbind CMS for content management, and Claude Code as your development assistant.
+A complete hands-on guide to creating a blazing-fast static blog using Astro for the frontend and Inbind CMS for content management.
 
 ## What You'll Build
 
@@ -15,10 +15,11 @@ By the end of this tutorial, you'll have:
 
 ## Prerequisites
 
-- A GitHub account
-- Claude Code CLI installed ([installation guide](https://docs.anthropic.com/en/docs/claude-code))
-- Basic understanding of git
-- An Inbind CMS account with content published to R2
+- **Node.js** 18 or higher installed
+- A **GitHub account**
+- **Git** installed and configured
+- Basic knowledge of HTML, CSS, and JavaScript
+- An **Inbind CMS account** with content published to R2
 
 ## Architecture Overview
 
@@ -41,379 +42,870 @@ By the end of this tutorial, you'll have:
 3. At build time, Astro fetches content from R2 via public URLs
 4. Static HTML pages are generated and deployed to GitHub Pages
 
-## Quick Start: Single Prompt Method
-
-Want to build the entire blog in one shot? Here's a comprehensive prompt you can give to Claude Code:
-
-### Step 1: Set Up Inbind CMS (Manual)
-
-First, set up your content in Inbind:
-1. Create a "blogs" collection with fields: `name`, `slug`, `summary`, `body`
-2. Publish to R2 and note your URL: `https://pub-xxxxx.r2.dev/content/{id}/`
-3. Create at least one blog post and publish it
-
-### Step 2: Build Everything with Claude Code
-
-Open Claude Code in an empty directory and give this single prompt:
-
-```
-I need you to build a complete Astro blog that fetches content from Inbind CMS via R2 storage.
-
-PROJECT SETUP:
-- Initialize a new Astro project with minimal template and TypeScript strict mode
-- Install all dependencies
-
-ENVIRONMENT CONFIGURATION:
-- Create .env and .env.example files
-- Add PUBLIC_R2_BASE_URL variable
-- I'll provide the actual R2 URL after initialization
-
-DATA STRUCTURE:
-The CMS publishes JSON to R2 with this structure:
-- Index file at blogs/_index.json returns: {"total_items": N, "items": [{id, slug, name, summary, ...}]}
-- Individual blogs at blogs/{slug}.json include full content with "body" field containing HTML
-
-IMPLEMENTATION:
-1. Create src/lib/r2.ts with:
-   - fetchAllBlogs() - fetches from blogs/_index.json and returns the items array
-   - fetchBlog(slug) - fetches individual blog from blogs/{slug}.json with full body content
-
-2. Create src/pages/index.astro:
-   - Homepage that fetches all blogs at build time
-   - Displays blog cards in a responsive grid
-   - Each card shows: title (linked), summary, and "Read more" link
-   - Links should use import.meta.env.BASE_URL for GitHub Pages compatibility
-
-3. Create src/pages/blog/[slug].astro:
-   - Dynamic route for individual blog posts
-   - Use getStaticPaths() to fetch full blog content for each slug
-   - Display: back link, title, and body (rendered as HTML using set:html)
-   - All links should use import.meta.env.BASE_URL
-
-4. Create src/styles/global.css with:
-   - Clean, minimal design using system fonts
-   - Responsive grid layout for blog cards
-   - Proper HTML element styling for blog body (h1-h4, p, ul, ol, code, pre, img)
-   - Mobile-responsive breakpoints
-
-GITHUB PAGES DEPLOYMENT:
-- Configure astro.config.mjs for GitHub Pages project site
-- Set site to 'https://USERNAME.github.io' (I'll provide my username)
-- Set base to '/REPO-NAME' (I'll provide the repo name)
-- Create .github/workflows/deploy.yml with:
-  - Trigger on push to main/master
-  - Install Node.js, install dependencies
-  - Build with PUBLIC_R2_BASE_URL from GitHub secrets
-  - Deploy to GitHub Pages using actions/deploy-pages@v4
-
-Create a comprehensive README.md explaining:
-- What the project is
-- The architecture (CMS -> R2 -> Astro -> GitHub Pages)
-- Setup instructions
-- How to configure the R2 URL
-- How to deploy
-- How content updates work
-
-After you've created everything, I'll provide:
-1. My actual R2 base URL for the .env file
-2. My GitHub username
-3. My desired repository name
-
-Then we'll test locally, create the GitHub repo, and deploy.
-```
-
-### Step 3: Provide Your Details
-
-After Claude Code builds everything, provide your specific information:
-
-```
-Here are my details:
-- R2 Base URL: https://pub-xxxxx.r2.dev/content/{your-collection-id}
-- GitHub Username: your-username
-- Repository Name: my-blog
-
-Please update the .env file and astro.config.mjs with these values.
-```
-
-### Step 4: Deploy
-
-Finally, ask Claude to deploy:
-
-```
-Now let's deploy this to GitHub Pages:
-1. Create the GitHub repository called "my-blog" and push the code
-2. Set the PUBLIC_R2_BASE_URL GitHub secret
-3. Enable GitHub Pages with source set to "GitHub Actions"
-4. Trigger the deployment
-```
-
-That's it! Your blog will be live at `https://your-username.github.io/my-blog/`
-
 ---
-
-## Alternative: Step-by-Step Method
-
-If you prefer more control or want to understand each step, follow this detailed walkthrough:
 
 ## Part 1: Setting Up Inbind CMS
 
 ### Step 1: Create Your CMS Collection
 
-1. Sign up at [Inbind](https://inbind.app) and create a new collection called "blogs"
-2. Add the following fields to your collection:
-   - `name` (Text) - The blog post title
-   - `slug` (Text) - URL-friendly identifier (e.g., "my-first-post")
-   - `summary` (Text) - Brief description for the listing page
-   - `body` (Rich Text) - The main content of your blog post
+1. Sign up at [Inbind](https://inbind.app) and create a new organization
+2. Create a new collection called **"blogs"**
+3. Add the following fields to your collection:
+   - **name** (Text) - The blog post title
+   - **slug** (Text) - URL-friendly identifier (e.g., "my-first-post")
+   - **summary** (Text) - Brief description for the listing page
+   - **body** (Rich Text/HTML) - The main content of your blog post
 
 ### Step 2: Configure R2 Publishing
 
-3. In Inbind settings, configure your Cloudflare R2 bucket for publishing
-4. Note your R2 public URL - it will look like:
+4. In Inbind settings, configure your Cloudflare R2 bucket for publishing
+5. Inbind will provide you with an R2 public URL that looks like:
    ```
-   https://pub-xxxxx.r2.dev
+   https://pub-xxxxxxxxx.r2.dev/content/{collection-id}/
    ```
+6. **Save this URL** - you'll need it later
 
 ### Step 3: Create Your First Blog Post
 
-5. Create a new blog post with:
+7. Create a new blog post:
    - **Name:** "My First Post"
    - **Slug:** "my-first-post"
-   - **Summary:** "Welcome to my new blog!"
-   - **Body:** Your content (supports HTML formatting)
+   - **Summary:** "Welcome to my new blog built with Astro and Inbind!"
+   - **Body:** Write some content using the rich text editor
 
-6. Publish the post - Inbind will create these files in R2:
-   - `blogs/_index.json` - List of all blog posts
-   - `blogs/my-first-post.json` - Individual post content
+8. Click **Publish** - Inbind will create these files in R2:
+   - `blogs/_index.json` - Index of all blog posts
+   - `blogs/my-first-post.json` - Your individual blog post
 
 ### Step 4: Verify Your R2 URLs
 
 Test that your content is accessible:
+
 ```bash
-# Check the index
+# Replace with your actual R2 URL
 curl https://pub-xxxxx.r2.dev/content/{id}/blogs/_index.json
 
-# Check individual post
+# You should see:
+{
+  "total_items": 1,
+  "items": [{
+    "id": 123,
+    "slug": "my-first-post",
+    "name": "My First Post",
+    "summary": "Welcome to my new blog...",
+    ...
+  }]
+}
+```
+
+The index file contains metadata, but not the full body content. The full content is in individual files:
+
+```bash
 curl https://pub-xxxxx.r2.dev/content/{id}/blogs/my-first-post.json
+
+# You should see the same data plus:
+{
+  "name": "My First Post",
+  "slug": "my-first-post",
+  "body": "<p>Your full blog content here...</p>",
+  "summary": "Welcome to my new blog...",
+  ...
+}
 ```
 
-You should see JSON data for your blog posts.
+---
 
-## Part 2: Building the Astro Blog with Claude Code
+## Part 2: Building the Astro Blog
 
-### Step 1: Initialize Your Project
+### Step 1: Initialize Astro Project
 
-1. Create a new directory and open Claude Code:
-   ```bash
-   mkdir my-blog
-   cd my-blog
-   claude
-   ```
+Create a new directory and initialize Astro:
 
-2. Tell Claude to initialize the project:
-   ```
-   Create a new Astro blog project. Use the minimal template with TypeScript strict mode.
-   ```
-
-### Step 2: Set Up Environment Configuration
-
-Ask Claude:
-```
-Create .env and .env.example files for storing the R2 base URL.
-The variable should be called PUBLIC_R2_BASE_URL.
+```bash
+mkdir my-blog
+cd my-blog
+npm create astro@latest . -- --template minimal --typescript strict --no-install --skip-houston
+npm install
 ```
 
-Then update your `.env` file with your actual R2 URL:
-```env
-PUBLIC_R2_BASE_URL=https://pub-xxxxx.r2.dev/content/{your-collection-id}
+This creates a minimal Astro project with TypeScript.
+
+### Step 2: Create Environment Configuration
+
+Create `.env.example`:
+
+```bash
+cat > .env.example << 'EOF'
+# R2 Storage Configuration
+# Replace with your actual R2 bucket public URL
+PUBLIC_R2_BASE_URL=https://your-r2-bucket.r2.dev/content/{collection-id}
+EOF
 ```
+
+Create `.env` with your actual URL:
+
+```bash
+cat > .env << 'EOF'
+# R2 Storage Configuration
+PUBLIC_R2_BASE_URL=https://pub-xxxxx.r2.dev/content/497
+EOF
+```
+
+**Important:** Replace the URL with your actual R2 URL from Inbind!
 
 ### Step 3: Create Data Fetching Utilities
 
-Tell Claude:
+Create the directory:
+
+```bash
+mkdir -p src/lib
 ```
-Create src/lib/r2.ts with functions to fetch blog data from R2.
-The CMS returns an index file with this structure:
-{
-  "total_items": 1,
-  "items": [{ "id": 123, "slug": "post-slug", "name": "Title", "summary": "..." }]
+
+Create `src/lib/r2.ts`:
+
+```typescript
+// R2 Data Fetching Utilities
+
+export interface Blog {
+  name: string;
+  slug: string;
+  body: string;
+  summary: string;
 }
 
-Individual blog files have the full content including a "body" field with HTML.
+/**
+ * Get the base R2 URL from environment variables
+ */
+function getR2BaseUrl(): string {
+  const baseUrl = import.meta.env.PUBLIC_R2_BASE_URL;
+  if (!baseUrl) {
+    throw new Error('PUBLIC_R2_BASE_URL environment variable is not set');
+  }
+  return baseUrl.replace(/\/$/, ''); // Remove trailing slash if present
+}
 
-Functions needed:
-- fetchAllBlogs() - gets all blogs from the index
-- fetchBlog(slug) - fetches a single blog with full content
+/**
+ * Construct a full R2 URL for a given path
+ */
+function getR2Url(path: string): string {
+  const baseUrl = getR2BaseUrl();
+  return `${baseUrl}/${path}`;
+}
+
+/**
+ * Fetch all blogs from the index (CMS returns full blog objects)
+ */
+export async function fetchAllBlogs(): Promise<Blog[]> {
+  const url = getR2Url('blogs/_index.json');
+
+  try {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch blog index: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    // CMS returns: { total_items: number, items: Blog[] }
+    if (data && data.items && Array.isArray(data.items)) {
+      return data.items as Blog[];
+    }
+
+    throw new Error(`Unexpected blog index format`);
+  } catch (error) {
+    console.error('Error fetching blogs:', error);
+    throw error;
+  }
+}
+
+/**
+ * Fetch a single blog by its slug from its individual JSON file
+ * (includes full body content)
+ */
+export async function fetchBlog(slug: string): Promise<Blog> {
+  const url = getR2Url(`blogs/${slug}.json`);
+
+  try {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch blog "${slug}": ${response.status} ${response.statusText}`);
+    }
+
+    const blog: Blog = await response.json();
+    return blog;
+  } catch (error) {
+    console.error(`Error fetching blog "${slug}":`, error);
+    throw error;
+  }
+}
 ```
 
-### Step 4: Create the Homepage
+**What this does:**
+- `getR2BaseUrl()` - Reads the R2 URL from environment variables
+- `getR2Url()` - Constructs full URLs for fetching content
+- `fetchAllBlogs()` - Fetches the index to get all blog metadata
+- `fetchBlog()` - Fetches individual blog files with full body content
 
-Ask Claude:
-```
-Create src/pages/index.astro for the blog listing page.
-It should:
-- Fetch all blogs at build time
-- Display them in a responsive grid of cards
-- Each card shows the title, summary, and a link to the full post
-- Include basic styling with src/styles/global.css
-```
+### Step 4: Create Global Styles
 
-### Step 5: Create Blog Detail Pages
+Create the styles directory:
 
-Tell Claude:
-```
-Create src/pages/blog/[slug].astro for individual blog posts.
-It should:
-- Use getStaticPaths() to generate pages for all blogs at build time
-- Fetch the full blog content including the body
-- Render the body as HTML (it contains HTML content)
-- Include a back link to the homepage
-- Display the blog title and content
+```bash
+mkdir -p src/styles
 ```
 
-### Step 6: Test Locally
+Create `src/styles/global.css`:
 
-1. Start the development server:
-   ```bash
-   npm run dev
-   ```
+```css
+/* Global Styles */
 
-2. Visit `http://localhost:4321` to see your blog
+/* Reset and Base Styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
-3. Click on a post to view the full content
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.6;
+  color: #333;
+  background-color: #f9f9f9;
+}
 
-### Step 7: Build for Production
+/* Container */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
 
-Test the static build:
+/* Typography */
+h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  color: #111;
+}
+
+h2 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #222;
+}
+
+p {
+  margin-bottom: 1rem;
+}
+
+a {
+  color: #0066cc;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Header */
+header {
+  background-color: #fff;
+  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 2rem;
+}
+
+header .container {
+  padding: 1.5rem 1rem;
+}
+
+header h1 {
+  margin-bottom: 0;
+  font-size: 2rem;
+}
+
+/* Blog Listing */
+.blog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+.blog-card {
+  background-color: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.blog-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.blog-card h2 {
+  font-size: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.blog-card .summary {
+  color: #666;
+  margin-bottom: 1rem;
+}
+
+.blog-card .read-more {
+  display: inline-block;
+  color: #0066cc;
+  font-weight: 500;
+}
+
+/* Blog Detail */
+.blog-detail {
+  background-color: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 2rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.blog-detail .back-link {
+  display: inline-block;
+  margin-bottom: 1.5rem;
+  color: #0066cc;
+  font-weight: 500;
+}
+
+.blog-detail h1 {
+  margin-bottom: 1.5rem;
+}
+
+.blog-detail .body {
+  line-height: 1.8;
+  color: #444;
+}
+
+.blog-detail .body h1,
+.blog-detail .body h2,
+.blog-detail .body h3,
+.blog-detail .body h4 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.blog-detail .body p {
+  margin-bottom: 1rem;
+}
+
+.blog-detail .body ul,
+.blog-detail .body ol {
+  margin-bottom: 1rem;
+  margin-left: 1.5rem;
+}
+
+.blog-detail .body li {
+  margin-bottom: 0.5rem;
+}
+
+.blog-detail .body code {
+  background-color: #f5f5f5;
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.9em;
+}
+
+.blog-detail .body pre {
+  background-color: #f5f5f5;
+  padding: 1rem;
+  border-radius: 5px;
+  overflow-x: auto;
+  margin-bottom: 1rem;
+}
+
+.blog-detail .body pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+.blog-detail .body a {
+  color: #0066cc;
+  text-decoration: underline;
+}
+
+.blog-detail .body img {
+  max-width: 100%;
+  height: auto;
+  margin: 1rem 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .container {
+    padding: 1.5rem 1rem;
+  }
+
+  h1 {
+    font-size: 2rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+  }
+
+  .blog-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .blog-detail {
+    padding: 1.5rem;
+  }
+}
+```
+
+### Step 5: Create the Homepage
+
+Edit `src/pages/index.astro`:
+
+```astro
+---
+import { fetchAllBlogs } from '../lib/r2';
+import '../styles/global.css';
+
+// Fetch all blogs at build time
+const blogs = await fetchAllBlogs();
+const base = import.meta.env.BASE_URL;
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blog</title>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1>Blog</h1>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="blog-grid">
+      {blogs.map(blog => (
+        <article class="blog-card">
+          <h2>
+            <a href={`${base}/blog/${blog.slug}`}>{blog.name}</a>
+          </h2>
+          <p class="summary">{blog.summary}</p>
+          <a href={`${base}/blog/${blog.slug}`} class="read-more">Read more →</a>
+        </article>
+      ))}
+    </div>
+
+    {blogs.length === 0 && (
+      <p>No blog posts found.</p>
+    )}
+  </main>
+</body>
+</html>
+```
+
+**What this does:**
+- Fetches all blogs at build time using `fetchAllBlogs()`
+- Uses `import.meta.env.BASE_URL` for GitHub Pages compatibility
+- Displays each blog as a card with title, summary, and link
+
+### Step 6: Create Blog Detail Pages
+
+Create the directory:
+
+```bash
+mkdir -p src/pages/blog
+```
+
+Create `src/pages/blog/[slug].astro`:
+
+```astro
+---
+import { fetchAllBlogs, fetchBlog } from '../../lib/r2';
+import '../../styles/global.css';
+
+// Generate static paths for all blogs at build time
+export async function getStaticPaths() {
+  // Get the index to know which blogs exist
+  const blogIndex = await fetchAllBlogs();
+
+  // Fetch full content for each blog (including body)
+  const paths = await Promise.all(
+    blogIndex.map(async (indexEntry) => {
+      const fullBlog = await fetchBlog(indexEntry.slug);
+      return {
+        params: { slug: indexEntry.slug },
+        props: { blog: fullBlog }
+      };
+    })
+  );
+
+  return paths;
+}
+
+// Get the blog from props
+const { blog } = Astro.props;
+const base = import.meta.env.BASE_URL;
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{blog.name} - Blog</title>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1><a href={base}>Blog</a></h1>
+    </div>
+  </header>
+
+  <main class="container">
+    <article class="blog-detail">
+      <a href={base} class="back-link">← Back to all posts</a>
+      <h1>{blog.name}</h1>
+      <div class="body" set:html={blog.body}></div>
+    </article>
+  </main>
+</body>
+</html>
+```
+
+**What this does:**
+- Uses `getStaticPaths()` to generate a static page for each blog post
+- Fetches the full blog content (including body) for each post
+- Renders the body as HTML using `set:html` directive
+- All links use `BASE_URL` for GitHub Pages compatibility
+
+### Step 7: Test Locally
+
+Start the development server:
+
+```bash
+npm run dev
+```
+
+Visit `http://localhost:4321` and verify:
+- ✅ Homepage shows all blog posts
+- ✅ Clicking a post shows the full content
+- ✅ Back link works
+- ✅ Styling looks good
+
+Build for production to test:
+
 ```bash
 npm run build
 ```
 
-This will generate static HTML files in the `dist/` directory.
+You should see output like:
+```
+generating static routes
+▶ src/pages/blog/[slug].astro
+  └─ /blog/my-first-post/index.html
+▶ src/pages/index.astro
+  └─ /index.html
+✓ Completed in 150ms.
+```
+
+---
 
 ## Part 3: Deploying to GitHub Pages
 
-### Step 1: Configure for GitHub Pages
+### Step 1: Configure Astro for GitHub Pages
 
-Ask Claude:
-```
-Set up this project for GitHub Pages deployment to a project site.
-The repository will be called "my-blog".
-Configure Astro with the correct base path and create a GitHub Actions workflow.
-```
+Edit `astro.config.mjs`:
 
-Claude will:
-- Update `astro.config.mjs` with site and base path
-- Create `.github/workflows/deploy.yml` for automatic deployments
-- Fix all internal links to use the base path
+```javascript
+// @ts-check
+import { defineConfig } from 'astro/config';
 
-### Step 2: Create GitHub Repository
-
-Tell Claude:
-```
-Create a GitHub repository called "my-blog" and push the code.
+// https://astro.build/config
+export default defineConfig({
+  site: 'https://YOUR-USERNAME.github.io',
+  base: '/YOUR-REPO-NAME',
+});
 ```
 
-Or do it manually:
+Replace:
+- `YOUR-USERNAME` with your GitHub username
+- `YOUR-REPO-NAME` with your desired repository name (e.g., "my-blog")
+
+**Why this is needed:** GitHub Pages project sites are served at `/repo-name/`, so Astro needs to know the base path for all links and assets.
+
+### Step 2: Create GitHub Actions Workflow
+
+Create the directory:
+
 ```bash
+mkdir -p .github/workflows
+```
+
+Create `.github/workflows/deploy.yml`:
+
+```yaml
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build site
+        env:
+          PUBLIC_R2_BASE_URL: ${{ secrets.PUBLIC_R2_BASE_URL }}
+        run: npm run build
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+```
+
+**What this does:**
+- Triggers on every push to main/master branch
+- Installs Node.js and dependencies
+- Builds your site with the R2 URL from GitHub Secrets
+- Deploys the generated files to GitHub Pages
+
+### Step 3: Initialize Git and Create Repository
+
+```bash
+# Initialize git (if not already done)
 git init
+
+# Add all files
 git add .
-git commit -m "Initial commit"
-gh repo create my-blog --public --source=. --remote=origin --push
+
+# Create initial commit
+git commit -m "Initial commit: Astro blog with Inbind CMS"
+
+# Create GitHub repository (using GitHub CLI)
+gh repo create my-blog --public --source=. --remote=origin
+
+# Push to GitHub
+git push -u origin master
 ```
 
-### Step 3: Add GitHub Secrets
+Or create the repository manually on GitHub and push:
 
-Add your R2 URL as a secret (so the build can access your content):
 ```bash
-gh secret set PUBLIC_R2_BASE_URL --body "https://pub-xxxxx.r2.dev/content/{id}"
+git remote add origin https://github.com/YOUR-USERNAME/my-blog.git
+git push -u origin master
 ```
 
-### Step 4: Enable GitHub Pages
+### Step 4: Add GitHub Secret
 
-1. Go to your repository settings: `https://github.com/{username}/my-blog/settings/pages`
+Add your R2 URL as a secret so the build can fetch your content:
+
+```bash
+gh secret set PUBLIC_R2_BASE_URL --body "https://pub-xxxxx.r2.dev/content/497"
+```
+
+Or add it manually:
+1. Go to your repository on GitHub
+2. Settings → Secrets and variables → Actions
+3. Click "New repository secret"
+4. Name: `PUBLIC_R2_BASE_URL`
+5. Value: Your R2 URL (e.g., `https://pub-xxxxx.r2.dev/content/497`)
+
+### Step 5: Enable GitHub Pages
+
+1. Go to your repository settings: `https://github.com/YOUR-USERNAME/my-blog/settings/pages`
 2. Under "Build and deployment":
    - **Source:** Select "GitHub Actions"
-3. Save the settings
+3. Save
 
-### Step 5: Deploy
+### Step 6: Trigger Deployment
 
-Push any commit to trigger deployment:
+The workflow will automatically run when you push. To manually trigger:
+
 ```bash
-git push
+gh workflow run deploy.yml
 ```
 
 Watch the deployment:
+
 ```bash
 gh run watch
 ```
 
-Your blog will be live at: `https://{username}.github.io/my-blog/`
+Once complete, your blog will be live at:
+```
+https://YOUR-USERNAME.github.io/my-blog/
+```
 
-## How It All Works Together
+---
 
-### Build Time (Automated via GitHub Actions)
+## Understanding How It Works
 
-1. GitHub Actions triggers on every push to `main`/`master`
-2. Workflow installs Node.js and dependencies
-3. Sets `PUBLIC_R2_BASE_URL` from GitHub Secrets
-4. Runs `npm run build`:
-   - Astro fetches `blogs/_index.json` from R2
-   - For each blog, fetches the full content from `blogs/{slug}.json`
-   - Generates static HTML pages with the content
-5. Deploys the `dist/` folder to GitHub Pages
+### Build Time Flow
 
-### Runtime (User Visits Your Site)
+1. **GitHub Actions triggers** when you push code
+2. **Dependencies are installed** (`npm ci`)
+3. **Environment variable is set** from GitHub Secrets
+4. **Astro build runs:**
+   - Fetches `blogs/_index.json` from R2
+   - For each blog slug, fetches `blogs/{slug}.json`
+   - Generates static HTML files
+   - All content is embedded in the HTML
+5. **Static files are deployed** to GitHub Pages
 
-1. User visits `https://{username}.github.io/my-blog/`
-2. GitHub Pages serves the pre-generated static HTML
-3. No API calls, no database queries - instant loading!
-4. Clicking a blog post loads another static HTML page
+### Runtime Flow
 
-### Content Updates
+1. **User visits your site**
+2. **GitHub Pages serves static HTML** - no API calls needed!
+3. **Page loads instantly** - all content is already in the HTML
+4. **Clicking links** navigates to other pre-generated static pages
 
-1. Edit content in Inbind CMS
-2. Publish changes (updates R2 JSON files)
-3. Push a commit to trigger rebuild:
+### Content Update Flow
+
+1. **Edit content in Inbind CMS**
+2. **Publish** - Inbind updates the JSON files in R2
+3. **Trigger rebuild:**
    ```bash
-   git commit --allow-empty -m "Trigger rebuild"
+   git commit --allow-empty -m "Trigger rebuild for content update"
    git push
    ```
-4. Site rebuilds with new content and redeploys automatically
+4. **GitHub Actions rebuilds** with new content
+5. **Site updates automatically**
 
-## File Structure
+---
 
-Your final project structure:
+## File Structure Reference
+
+Your final project should look like this:
 
 ```
 my-blog/
-├── .env                           # R2 URL (not in git)
+├── .env                           # R2 URL (gitignored)
 ├── .env.example                   # Example env file
 ├── .github/
 │   └── workflows/
 │       └── deploy.yml            # GitHub Actions workflow
-├── astro.config.mjs              # Astro config with base path
-├── package.json
+├── .gitignore                    # Git ignore file
+├── astro.config.mjs              # Astro configuration
+├── package.json                  # Dependencies
+├── package-lock.json             # Dependency lock file
+├── tsconfig.json                 # TypeScript config
 ├── src/
 │   ├── lib/
 │   │   └── r2.ts                # Data fetching utilities
 │   ├── pages/
-│   │   ├── index.astro          # Blog listing (homepage)
+│   │   ├── index.astro          # Blog listing page
 │   │   └── blog/
-│   │       └── [slug].astro     # Individual blog posts
+│   │       └── [slug].astro     # Individual blog pages
 │   └── styles/
 │       └── global.css           # Global styles
-└── public/                       # Static assets
+└── public/                       # Static assets (favicons, etc.)
 ```
 
-## Advanced Customization
+---
 
-### Adding Categories
+## Customization Ideas
 
-If your Inbind CMS has categories, extend the data fetching:
+### 1. Add a Custom Domain
+
+In your repository settings:
+1. Go to Settings → Pages
+2. Add your custom domain
+3. Update `site` in `astro.config.mjs` to your domain
+4. Remove or adjust `base` if using a root domain
+
+### 2. Add More Pages
+
+Create `src/pages/about.astro`:
+
+```astro
+---
+import '../styles/global.css';
+const base = import.meta.env.BASE_URL;
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About - Blog</title>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1><a href={base}>Blog</a></h1>
+    </div>
+  </header>
+
+  <main class="container">
+    <article class="blog-detail">
+      <h1>About</h1>
+      <p>Your about page content...</p>
+    </article>
+  </main>
+</body>
+</html>
+```
+
+### 3. Add Categories
+
+If your Inbind CMS has categories, add them to `src/lib/r2.ts`:
 
 ```typescript
-// In src/lib/r2.ts
+export interface Category {
+  name: string;
+  slug: string;
+}
+
 export async function fetchAllCategories(): Promise<Category[]> {
   const url = getR2Url('categories/_index.json');
   const response = await fetch(url);
@@ -422,15 +914,9 @@ export async function fetchAllCategories(): Promise<Category[]> {
 }
 ```
 
-Then filter blogs by category in your pages.
+Then create category filter pages.
 
-### Custom Styling
-
-Replace `src/styles/global.css` with your own design, or integrate:
-- **Tailwind CSS:** `npx astro add tailwind`
-- **Styled Components:** Install your preferred CSS-in-JS library
-
-### SEO Optimization
+### 4. Improve SEO
 
 Add meta tags to your pages:
 
@@ -438,39 +924,66 @@ Add meta tags to your pages:
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{blog.name} - My Blog</title>
   <meta name="description" content={blog.summary}>
   <meta property="og:title" content={blog.name}>
   <meta property="og:description" content={blog.summary}>
+  <meta property="og:type" content="article">
+  <title>{blog.name} - Blog</title>
 </head>
 ```
 
-### RSS Feed
+### 5. Add an RSS Feed
 
-Ask Claude to create an RSS feed:
+Create `src/pages/rss.xml.js`:
+
+```javascript
+import { fetchAllBlogs } from '../lib/r2';
+
+export async function GET() {
+  const blogs = await fetchAllBlogs();
+
+  const rss = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>My Blog</title>
+    <link>https://your-username.github.io/my-blog/</link>
+    <description>My blog description</description>
+    ${blogs.map(blog => `
+    <item>
+      <title>${blog.name}</title>
+      <link>https://your-username.github.io/my-blog/blog/${blog.slug}</link>
+      <description>${blog.summary}</description>
+    </item>
+    `).join('')}
+  </channel>
+</rss>`;
+
+  return new Response(rss, {
+    headers: {
+      'Content-Type': 'application/xml'
+    }
+  });
+}
 ```
-Create src/pages/rss.xml.js that generates an RSS feed from all blog posts
-```
+
+---
 
 ## Troubleshooting
 
-### Build Fails with "Failed to fetch blog index"
+### Build Fails: "Failed to fetch blog index"
 
-**Problem:** The R2 URL is incorrect or not set.
+**Problem:** The R2 URL is not set or incorrect.
 
 **Solution:**
-1. Verify your R2 URL in Inbind settings
-2. Check the GitHub Secret is set correctly:
-   ```bash
-   gh secret list
-   ```
-3. Ensure the URL includes the full path to your collection
+1. Check your `.env` file has the correct URL
+2. Verify the GitHub Secret is set: `gh secret list`
+3. Test the URL directly: `curl https://your-r2-url/blogs/_index.json`
 
 ### Links Don't Work on GitHub Pages
 
-**Problem:** Links go to wrong URLs (missing base path).
+**Problem:** Links go to the wrong URL (missing `/my-blog` prefix).
 
-**Solution:** Ensure all links use `import.meta.env.BASE_URL`:
+**Solution:** All links must use `import.meta.env.BASE_URL`:
 ```astro
 const base = import.meta.env.BASE_URL;
 <a href={`${base}/blog/${slug}`}>...</a>
@@ -478,75 +991,99 @@ const base = import.meta.env.BASE_URL;
 
 ### Blog Body Is Empty
 
-**Problem:** The `_index.json` doesn't include the full body content.
+**Problem:** The body isn't showing on blog detail pages.
 
-**Solution:** Fetch individual blog files in `getStaticPaths()`:
-```typescript
-export async function getStaticPaths() {
-  const blogIndex = await fetchAllBlogs();
-  const paths = await Promise.all(
-    blogIndex.map(async (entry) => {
-      const fullBlog = await fetchBlog(entry.slug);
-      return { params: { slug: entry.slug }, props: { blog: fullBlog } };
-    })
-  );
-  return paths;
-}
-```
+**Solution:** Check that:
+1. `getStaticPaths()` fetches full blog content with `fetchBlog(slug)`
+2. The body is rendered with `set:html`: `<div set:html={blog.body}></div>`
+3. Individual blog JSON files contain the body field
 
-### Local Development Works, Production Doesn't
+### Styles Not Loading
 
-**Problem:** Environment variable not set in GitHub.
+**Problem:** CSS isn't being applied.
 
-**Solution:** Add the R2 URL as a GitHub Secret (see Step 3 in Part 3).
+**Solution:**
+1. Verify `import '../styles/global.css';` is in your `.astro` files
+2. Check the CSS file exists at `src/styles/global.css`
+3. Clear your browser cache
 
-## Performance Considerations
+### GitHub Actions Failing
 
-### Build Time Optimization
+**Problem:** Deployment workflow fails.
 
-- **Parallel Fetching:** The code uses `Promise.all()` to fetch all blogs in parallel
-- **Edge Caching:** R2 automatically caches frequently accessed files
-- **Incremental Builds:** Only rebuild when content changes
+**Solution:**
+1. Check the workflow logs on GitHub: Actions tab
+2. Verify `PUBLIC_R2_BASE_URL` secret is set
+3. Ensure `package.json` has all necessary dependencies
+4. Check Node version matches workflow (should be 18+)
 
-### Runtime Performance
+---
+
+## Performance Tips
+
+### Optimize Build Time
+
+- **Parallel fetching:** The code uses `Promise.all()` to fetch all blogs in parallel
+- **Cache dependencies:** GitHub Actions caches `node_modules` automatically
+- **Incremental builds:** Only rebuild when content changes
+
+### Optimize Runtime Performance
 
 - **Static HTML:** No JavaScript framework overhead
-- **No API Calls:** Content is baked into HTML at build time
-- **CDN Delivery:** GitHub Pages uses a global CDN
-- **Lighthouse Score:** Expect 95+ scores out of the box
+- **No API calls:** Content is baked into HTML at build time
+- **CDN delivery:** GitHub Pages uses a global CDN
+- **Lazy load images:** Add `loading="lazy"` to `<img>` tags in your body content
 
-## Cost Analysis
+### Lighthouse Scores
 
-- **Inbind CMS:** Check current pricing at inbind.app
-- **Cloudflare R2:** Free tier includes 10GB storage and 10M Class A operations/month
+With this setup, you should achieve:
+- **Performance:** 95-100
+- **Accessibility:** 90-100
+- **Best Practices:** 90-100
+- **SEO:** 90-100
+
+---
+
+## Cost Breakdown
+
+- **Inbind CMS:** Check current pricing at [inbind.app](https://inbind.app)
+- **Cloudflare R2:**
+  - Free tier: 10GB storage, 10M Class A operations/month
+  - Typically free for blogs
 - **GitHub Pages:** Free for public repositories
-- **Total Monthly Cost:** As low as $0 for small blogs
+- **Domain (optional):** ~$10-15/year
+
+**Total:** As low as $0/month for a small blog!
+
+---
 
 ## Next Steps
 
-Now that your blog is live, you can:
+Now that your blog is live, consider:
 
-1. **Add More Features:**
-   - Search functionality
-   - Tags and categories
-   - Comments (via third-party services)
-   - Analytics (Plausible, Fathom, etc.)
+1. **Content:**
+   - Write more blog posts
+   - Add images (upload to R2 or use a service like Cloudinary)
+   - Create an About page
 
-2. **Improve Content:**
-   - Add images (store in R2 or use a CDN)
-   - Create an about page
-   - Add social media links
+2. **Features:**
+   - Add search functionality
+   - Implement tags/categories
+   - Add comments (via Disqus, Giscus, etc.)
+   - Set up analytics (Plausible, Fathom, etc.)
 
-3. **Optimize Further:**
-   - Add a sitemap
-   - Implement pagination for blog listing
-   - Add related posts suggestions
+3. **Optimization:**
    - Set up a custom domain
+   - Add a sitemap
+   - Implement pagination
+   - Add related posts
 
-4. **Share Your Work:**
-   - Write about your experience
-   - Share on social media
-   - Contribute to the Astro community
+4. **Automation:**
+   - Set up webhooks to auto-rebuild when content is published
+   - Add a CMS preview environment
+   - Implement draft/publish workflows
+
+---
 
 ## Resources
 
@@ -554,27 +1091,22 @@ Now that your blog is live, you can:
 - **Inbind Documentation:** https://docs.inbind.app
 - **Cloudflare R2 Docs:** https://developers.cloudflare.com/r2/
 - **GitHub Pages Docs:** https://docs.github.com/pages
-- **Claude Code Docs:** https://docs.anthropic.com/en/docs/claude-code
-
-## Conclusion
-
-You've built a modern, fast, and cost-effective blog using:
-- **Astro** for blazing-fast static site generation
-- **Inbind CMS** for easy content management
-- **Cloudflare R2** for reliable content storage
-- **GitHub Pages** for free hosting
-- **Claude Code** as your AI development assistant
-
-The best part? Your content workflow is simple:
-1. Write in Inbind
-2. Publish
-3. Push a commit (or set up a webhook to auto-rebuild)
-4. Your blog updates automatically!
-
-Happy blogging! 🚀
+- **Example Repository:** https://github.com/verkhovin/astro-blog
 
 ---
 
-**Tutorial created with Claude Code**
-Repository: https://github.com/verkhovin/astro-blog
-Live Demo: https://verkhovin.github.io/astro-blog/
+## Conclusion
+
+Congratulations! You've built a modern, performant blog using:
+- **Astro** for ultra-fast static site generation
+- **Inbind CMS** for a great content editing experience
+- **Cloudflare R2** for reliable, edge-cached content storage
+- **GitHub Pages** for free, reliable hosting
+
+Your workflow is simple:
+1. ✍️ Write in Inbind
+2. 📤 Publish
+3. 🚀 Push to GitHub (or set up auto-rebuild)
+4. ✨ Site updates automatically
+
+Happy blogging! 🎉
