@@ -41,6 +41,120 @@ By the end of this tutorial, you'll have:
 3. At build time, Astro fetches content from R2 via public URLs
 4. Static HTML pages are generated and deployed to GitHub Pages
 
+## Quick Start: Single Prompt Method
+
+Want to build the entire blog in one shot? Here's a comprehensive prompt you can give to Claude Code:
+
+### Step 1: Set Up Inbind CMS (Manual)
+
+First, set up your content in Inbind:
+1. Create a "blogs" collection with fields: `name`, `slug`, `summary`, `body`
+2. Publish to R2 and note your URL: `https://pub-xxxxx.r2.dev/content/{id}/`
+3. Create at least one blog post and publish it
+
+### Step 2: Build Everything with Claude Code
+
+Open Claude Code in an empty directory and give this single prompt:
+
+```
+I need you to build a complete Astro blog that fetches content from Inbind CMS via R2 storage.
+
+PROJECT SETUP:
+- Initialize a new Astro project with minimal template and TypeScript strict mode
+- Install all dependencies
+
+ENVIRONMENT CONFIGURATION:
+- Create .env and .env.example files
+- Add PUBLIC_R2_BASE_URL variable
+- I'll provide the actual R2 URL after initialization
+
+DATA STRUCTURE:
+The CMS publishes JSON to R2 with this structure:
+- Index file at blogs/_index.json returns: {"total_items": N, "items": [{id, slug, name, summary, ...}]}
+- Individual blogs at blogs/{slug}.json include full content with "body" field containing HTML
+
+IMPLEMENTATION:
+1. Create src/lib/r2.ts with:
+   - fetchAllBlogs() - fetches from blogs/_index.json and returns the items array
+   - fetchBlog(slug) - fetches individual blog from blogs/{slug}.json with full body content
+
+2. Create src/pages/index.astro:
+   - Homepage that fetches all blogs at build time
+   - Displays blog cards in a responsive grid
+   - Each card shows: title (linked), summary, and "Read more" link
+   - Links should use import.meta.env.BASE_URL for GitHub Pages compatibility
+
+3. Create src/pages/blog/[slug].astro:
+   - Dynamic route for individual blog posts
+   - Use getStaticPaths() to fetch full blog content for each slug
+   - Display: back link, title, and body (rendered as HTML using set:html)
+   - All links should use import.meta.env.BASE_URL
+
+4. Create src/styles/global.css with:
+   - Clean, minimal design using system fonts
+   - Responsive grid layout for blog cards
+   - Proper HTML element styling for blog body (h1-h4, p, ul, ol, code, pre, img)
+   - Mobile-responsive breakpoints
+
+GITHUB PAGES DEPLOYMENT:
+- Configure astro.config.mjs for GitHub Pages project site
+- Set site to 'https://USERNAME.github.io' (I'll provide my username)
+- Set base to '/REPO-NAME' (I'll provide the repo name)
+- Create .github/workflows/deploy.yml with:
+  - Trigger on push to main/master
+  - Install Node.js, install dependencies
+  - Build with PUBLIC_R2_BASE_URL from GitHub secrets
+  - Deploy to GitHub Pages using actions/deploy-pages@v4
+
+Create a comprehensive README.md explaining:
+- What the project is
+- The architecture (CMS -> R2 -> Astro -> GitHub Pages)
+- Setup instructions
+- How to configure the R2 URL
+- How to deploy
+- How content updates work
+
+After you've created everything, I'll provide:
+1. My actual R2 base URL for the .env file
+2. My GitHub username
+3. My desired repository name
+
+Then we'll test locally, create the GitHub repo, and deploy.
+```
+
+### Step 3: Provide Your Details
+
+After Claude Code builds everything, provide your specific information:
+
+```
+Here are my details:
+- R2 Base URL: https://pub-xxxxx.r2.dev/content/{your-collection-id}
+- GitHub Username: your-username
+- Repository Name: my-blog
+
+Please update the .env file and astro.config.mjs with these values.
+```
+
+### Step 4: Deploy
+
+Finally, ask Claude to deploy:
+
+```
+Now let's deploy this to GitHub Pages:
+1. Create the GitHub repository called "my-blog" and push the code
+2. Set the PUBLIC_R2_BASE_URL GitHub secret
+3. Enable GitHub Pages with source set to "GitHub Actions"
+4. Trigger the deployment
+```
+
+That's it! Your blog will be live at `https://your-username.github.io/my-blog/`
+
+---
+
+## Alternative: Step-by-Step Method
+
+If you prefer more control or want to understand each step, follow this detailed walkthrough:
+
 ## Part 1: Setting Up Inbind CMS
 
 ### Step 1: Create Your CMS Collection
@@ -57,7 +171,7 @@ By the end of this tutorial, you'll have:
 3. In Inbind settings, configure your Cloudflare R2 bucket for publishing
 4. Note your R2 public URL - it will look like:
    ```
-   https://pub-xxxxx.r2.dev/content/{collection-id}/
+   https://pub-xxxxx.r2.dev
    ```
 
 ### Step 3: Create Your First Blog Post
