@@ -1,0 +1,50 @@
+---
+import { fetchAllBlogs, fetchBlog } from '../../lib/r2';
+import '../../styles/global.css';
+
+// Generate static paths for all blogs at build time
+export async function getStaticPaths() {
+  // Get the index to know which blogs exist
+  const blogIndex = await fetchAllBlogs();
+
+  // Fetch full content for each blog (including body)
+  const paths = await Promise.all(
+    blogIndex.map(async (indexEntry) => {
+      const fullBlog = await fetchBlog(indexEntry.slug);
+      return {
+        params: { slug: indexEntry.slug },
+        props: { blog: fullBlog }
+      };
+    })
+  );
+
+  return paths;
+}
+
+// Get the blog from props
+const { blog } = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{blog.name} - Blog</title>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1><a href="/">Blog</a></h1>
+    </div>
+  </header>
+
+  <main class="container">
+    <article class="blog-detail">
+      <a href="/" class="back-link">← Back to all posts</a>
+      <h1>{blog.name}</h1>
+      <div class="body" set:html={blog.body}></div>
+    </article>
+  </main>
+</body>
+</html>

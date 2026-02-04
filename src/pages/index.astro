@@ -1,0 +1,41 @@
+---
+import { fetchAllBlogs } from '../lib/r2';
+import '../styles/global.css';
+
+// Fetch all blogs at build time
+const blogs = await fetchAllBlogs();
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blog</title>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1>Blog</h1>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="blog-grid">
+      {blogs.map(blog => (
+        <article class="blog-card">
+          <h2>
+            <a href={`/blog/${blog.slug}`}>{blog.name}</a>
+          </h2>
+          <p class="summary">{blog.summary}</p>
+          <a href={`/blog/${blog.slug}`} class="read-more">Read more →</a>
+        </article>
+      ))}
+    </div>
+
+    {blogs.length === 0 && (
+      <p>No blog posts found.</p>
+    )}
+  </main>
+</body>
+</html>
