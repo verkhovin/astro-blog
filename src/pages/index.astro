@@ -4,6 +4,7 @@ import '../styles/global.css';
 
 // Fetch all blogs at build time
 const blogs = await fetchAllBlogs();
+const base = import.meta.env.BASE_URL;
 ---
 
 <!DOCTYPE html>
@@ -25,10 +26,10 @@ const blogs = await fetchAllBlogs();
       {blogs.map(blog => (
         <article class="blog-card">
           <h2>
-            <a href={`/blog/${blog.slug}`}>{blog.name}</a>
+            <a href={`${base}/blog/${blog.slug}`}>{blog.name}</a>
           </h2>
           <p class="summary">{blog.summary}</p>
-          <a href={`/blog/${blog.slug}`} class="read-more">Read more →</a>
+          <a href={`${base}/blog/${blog.slug}`} class="read-more">Read more →</a>
         </article>
       ))}
     </div>
